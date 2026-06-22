@@ -10,5 +10,6 @@ wheels/
 .venv
 
 results/
+!results/metrics/features.csv
 
 data/
