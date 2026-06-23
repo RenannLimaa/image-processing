@@ -1,10 +1,3 @@
-"""
-Feature assembly module.
-
-Orchestrates all processing stages to produce a fixed-length feature vector
-for each image, then loads the entire dataset.
-"""
-
 import os
 from pathlib import Path
 
@@ -18,7 +11,6 @@ from src.descriptors import entropy, image_statistics
 from src.edges import canny, edge_density, segment_tire, defect_area_ratio
 from src.morphology import closing, rect_kernel, connected_regions_count
 
-
 FEATURE_NAMES = [
     "freq_energy_ratio",
     "entropy",
@@ -31,23 +23,13 @@ FEATURE_NAMES = [
     "connected_regions",
 ]
 
-
 def build_feature_vector(img_path: str) -> np.ndarray:
-    """
-    Run the full processing pipeline on a single image and return a 9-element
-    feature vector:
-
-        [freq_energy_ratio, entropy, mean, std, skewness, kurtosis,
-         edge_density, defect_area_ratio, connected_regions]
-    """
     stages = preprocess(img_path)
-    eq = stages["equalized"]  # histogram-equalised, blurred, grayscale 256×256
+    eq = stages["equalized"]
 
-    # --- Phase 3: Frequency domain ---
     dct_img = block_dct(eq)
     f_freq = freq_energy_ratio(dct_img)
 
-    # --- Phase 4: Descriptive analysis ---
     f_entropy = entropy(eq)
     stats = image_statistics(eq)
     f_mean = stats["mean"]
@@ -55,11 +37,9 @@ def build_feature_vector(img_path: str) -> np.ndarray:
     f_skew = stats["skewness"]
     f_kurt = stats["kurtosis"]
 
-    # --- Phase 5: Edges ---
     edges = canny(eq)
     f_edge = edge_density(edges)
 
-    # --- Phase 5: Segmentation + morphology ---
     mask = segment_tire(eq)
     kernel = rect_kernel(3)
     mask_closed = closing(mask, kernel)
@@ -71,26 +51,10 @@ def build_feature_vector(img_path: str) -> np.ndarray:
         f_edge, f_defect, f_regions,
     ], dtype=np.float64)
 
-
 def load_dataset(
     data_dir: str | Path,
     save_csv: str | Path | None = None,
 ) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    """
-    Iterate all images in ``data_dir`` (expects sub-folders named 'defective'
-    and 'good') and compute feature vectors for every image.
-
-    Parameters
-    ----------
-    data_dir : path to the dataset root folder
-    save_csv : if given, save the feature matrix + labels to this CSV path
-
-    Returns
-    -------
-    X       : float64 array of shape (N, 9)
-    y       : int array of shape (N,)  — 0=good, 1=defective
-    paths   : list of image file paths (length N)
-    """
     data_dir = Path(data_dir)
     class_map = {"good": 0, "defective": 1}
     extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}
@@ -114,10 +78,9 @@ def load_dataset(
     for path in tqdm(all_paths, desc="Extracting features"):
         try:
             X_rows.append(build_feature_vector(path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"[WARN] Skipping {path}: {exc}")
             failed.append(path)
-            # Remove corresponding label
             idx = all_paths.index(path)
             all_labels.pop(idx)
             all_paths.remove(path)

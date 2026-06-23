@@ -15,12 +15,6 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import models, transforms
 
-
-# ---------------------------------------------------------------------------
-# Dataset
-# ---------------------------------------------------------------------------
-
-# ImageNet statistics — required when using pre-trained MobileNetV2 weights
 _IMAGENET_MEAN = [0.485, 0.456, 0.406]
 _IMAGENET_STD  = [0.229, 0.224, 0.225]
 
@@ -40,7 +34,6 @@ EVAL_TRANSFORMS = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
 ])
-
 
 class TyreDataset(Dataset):
     """
@@ -79,11 +72,6 @@ class TyreDataset(Dataset):
         label = torch.tensor(self.labels[idx], dtype=torch.long)
         return tensor, label
 
-
-# ---------------------------------------------------------------------------
-# Model
-# ---------------------------------------------------------------------------
-
 def build_model(num_classes: int = 2, freeze_backbone: bool = True) -> nn.Module:
     """
     Return a MobileNetV2 with:
@@ -104,16 +92,10 @@ def build_model(num_classes: int = 2, freeze_backbone: bool = True) -> nn.Module
         for param in model.features.parameters():
             param.requires_grad = False
 
-    # Replace the default classifier (1000-class) with a binary head
     in_features = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(in_features, num_classes)
 
     return model
-
-
-# ---------------------------------------------------------------------------
-# Training helpers
-# ---------------------------------------------------------------------------
 
 def get_device() -> torch.device:
     """Return the best available device: CUDA > MPS > CPU."""
@@ -122,7 +104,6 @@ def get_device() -> torch.device:
     if torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
-
 
 def train_epoch(
     model: nn.Module,
@@ -160,7 +141,6 @@ def train_epoch(
 
     return total_loss / total, correct / total
 
-
 def evaluate(
     model: nn.Module,
     loader: DataLoader,
@@ -187,7 +167,6 @@ def evaluate(
             all_true.extend(labels.numpy().tolist())
 
     return np.array(all_true), np.array(all_pred)
-
 
 def train(
     model: nn.Module,
